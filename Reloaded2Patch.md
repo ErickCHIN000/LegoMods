@@ -1,40 +1,57 @@
 
-# How to Create a runtime memory patch with Reloaded 2
-## This is manly focused for the Lego Modding Community as most people seem to only know how to edit the games executable with a hex editor.
+# How to Create a Runtime Memory Patch with Reloaded 2
 
-I wont explain much on the setup side because if you cant figure this part out on your own then just stop reading as it gets more complex then this.
+## Introduction
 
-(i wont explain how to install an IDE, Reloaded 2 or NuGet (just use google to learn how to install a nuget package)
+This guide is primarily aimed at the LEGO Modding Community, where most members are familiar with editing game executables using a hex editor. This tutorial will teach you how to create a runtime memory patch using Reloaded 2, a more sophisticated approach.
 
-Setup Reloaded 2 and your IDE of choice to use the reloaded extension, my preference is Visual Studio 2022
-Read [THIS!](https://reloaded-project.github.io/Reloaded-II/DevelopmentEnvironmentSetup/)
-if you want to learn the basics of c# quickly then go and check out https://www.w3schools.com/cs/index.php
+### Prerequisites
 
-## 1. Create a reloaded 2 mod project
+This guide assumes you have a basic understanding of setting up your development environment. If you're not comfortable with setting up an IDE or installing Reloaded 2 or NuGet, I recommend searching online resources or tutorials for these initial steps. If you're unable to complete these prerequisites, this guide might be too advanced for you.
+
+**Note:** I won't be covering the installation of an IDE, Reloaded 2, or NuGet packages. You can find installation instructions for these tools online. My preferred IDE is Visual Studio 2022.
+
+### Resources
+
+- [Reloaded 2 Development Environment Setup](https://reloaded-project.github.io/Reloaded-II/DevelopmentEnvironmentSetup/)
+- If you're new to C#, I suggest learning the basics through [W3Schools C# Tutorial](https://www.w3schools.com/cs/index.php).
+
+## 1. Create a Reloaded 2 Mod Project
+
+Start by creating a new mod project in Reloaded 2. Select the appropriate template for your project.
+
 ![Template1](Template1.png)
-This is the template you will select, you will then need to give the project a name (part of the general project setup not reloaded 2)
-After giving it a project name you will have to configure the Reloaded 2 options, this include the mod name, description, creator(s), and if it will have Github support and Mod Config support.
-## 2. Install the Reloaded.Memory Nuget
+
+After selecting the template, name your project as part of the general setup process (this is not specific to Reloaded 2). Next, configure the Reloaded 2 options, including the mod name, description, creator(s), GitHub support, and Mod Config support.
+
+## 2. Install the `Reloaded.Memory` NuGet Package
+
+Install the `Reloaded.Memory` package through NuGet, which is essential for memory manipulation.
+
 ![TemplateNuget](nuget.png)
-## 3. Open Mod.cs
-the code inside mod.cs will look like this...
+
+## 3. Open `Mod.cs`
+
+Locate and open the `Mod.cs` file in your project. Initially, it will look something like this:
 
 ![Template2](Template2.png)
 
-here we will write the code to create a patch in the memory when the game starts
-## 4. Actual coding now
-you can get lazy and do this in the constructor or you can do this in its own method like i am.
+This is where you'll write the code to create a memory patch that will be applied when the game starts.
 
-I will now show you the simplest way to create a simple patch then i will explain each part of it
+## 4. Writing the Patch Code
 
-First you will need to add the following to access everything needed without using the namespaces
-```cs
-using Reloaded.Memory; 
-using System.Diagnostics; 
+You can choose to write the patching code directly in the constructor, or you can organize your code better by creating a separate method for it, which is the approach I'll demonstrate.
+
+### this specific patch will expand the character grid (Thanks: Bario the Weird)
+
+### Step-by-Step Code Breakdown
+
+First, add the following using directives to access the necessary classes and methods without fully qualifying the namespaces:
+
+```csharp
+using Reloaded.Memory;
+using System.Diagnostics;
 using Reloaded.Memory.Interfaces;
-```
-Next you will need to create a method that is called in the constructor, i named my method "Patch"
-```cs
 public Mod(ModContext context)
 {
     _modLoader = context.ModLoader;
@@ -44,44 +61,52 @@ public Mod(ModContext context)
     _configuration = context.Configuration;
     _modConfig = context.ModConfig;
 
-    // Patch the game by calling the method Patch
+    // Apply the patch
     Patch();
 }
 
 private void Patch()
 {
-
+    // Method implementation will go here
 }
-
 ```
-In Patch you will want 2 variables
+
+
+Within the `Patch` method, you need to define two key variables:
 
 ```cs
 private void Patch()
 {
-	var m = Memory.Instance; // get the Instance of the memory class
+    var m = Memory.Instance; // Get the instance of the Memory class
 
-	// get the base address of the process
-	var baseAddress = Process.GetCurrentProcess().MainModule.BaseAddress; // get the base address of the process	
+    // Retrieve the base address of the current process
+    var baseAddress = Process.GetCurrentProcess().MainModule.BaseAddress;
 }
 ```
 
-you will then need to call the method in the memory class instance to write to the games memory with the correct args
+To modify the game's memory, use the `SafeWrite` method provided by the `Memory` class:
+
 ```cs
-// allocate a stack memory of 1 byte and write the value 0x16 to it
-Span<byte> bytes = stackalloc byte[1] { 0x16 }; // 0x16 is the value we want to write in hex format (22 in decimal)
+// Allocate stack memory of 1 byte and write the value 0x16 to it
+Span<byte> bytes = stackalloc byte[1] { 0x16 }; // 0x16 in hex (22 in decimal)
 
-nuint address = (nuint)baseAddress + 0xF79E3; // get the address of the value we want to change (0xF79E3 is the offset of the value we want to change) and cast it to nuint for the SafeWrite method
+// Calculate the address to modify, using the base address and offset
+nuint address = (nuint)baseAddress + 0xF79E3;
 
-m.SafeWrite(address, bytes); // write the value 0x16 to the address 
+// Write the value 0x16 to the specified address
+m.SafeWrite(address, bytes);
+
+// this specific patch will expand the character grid (Thanks: Bario the Weird)
 ```
 
-you can also be a lunatic and do everything in 1 line like so
+For those who prefer brevity, the entire patching process can be condensed into a single line of code:
 ```cs
 Memory.Instance.SafeWrite((nuint)Process.GetCurrentProcess().MainModule.BaseAddress + 0xF79E3, stackalloc byte[1] { 0x16 });
 ```
 
-bringing everything together your entire Mod.cs file will look like this...
+### Final `Mod.cs` Implementation
+
+Here's how the complete `Mod.cs` file should look:
 ```cs
 using My_Reloaded_II_Mod1.Configuration;
 using My_Reloaded_II_Mod1.Template;
@@ -93,85 +118,7 @@ using Reloaded.Memory.Interfaces;
 
 namespace My_Reloaded_II_Mod1
 {
-    public class Mod : ModBase // <= Do not Remove.
-    {
-        private readonly IModLoader _modLoader;
-        private readonly IReloadedHooks? _hooks;
-        private readonly ILogger _logger;
-        private readonly IMod _owner;
-        private Config _configuration;
-        private readonly IModConfig _modConfig;
-
-        public Mod(ModContext context)
-        {
-            _modLoader = context.ModLoader;
-            _hooks = context.Hooks;
-            _logger = context.Logger;
-            _owner = context.Owner;
-            _configuration = context.Configuration;
-            _modConfig = context.ModConfig;
-
-            // Patch the game
-            Patch();
-        }
-
-        private void Patch()
-        {
-            var m = Memory.Instance; // get the Instance of the memory class
-
-            // get the base address of the process
-            var baseAddress = Process.GetCurrentProcess().MainModule.BaseAddress; // get the base address of the process
-
-            // another longer way to get the base address of the process in a more readable way
-            /*
-            var process = Process.GetCurrentProcess(); // get the current process
-            var mainModule = process.MainModule; // get the main module of the process
-            var baseAddress2 = mainModule.BaseAddress; // get the base address of the main module
-            */
-
-            // allocate a stack memory of 1 byte and write the value 0x16 to it
-            Span<byte> bytes = stackalloc byte[1] { 0x16 }; // 0x16 is the value we want to write in hex format (22 in decimal)
-
-            nuint address = (nuint)baseAddress + 0xF79E3; // get the address of the value we want to change (0xF79E3 is the offset of the value we want to change) and cast it to nuint for the SafeWrite method
-
-            m.SafeWrite(address, bytes); // write the value 0x16 to the address 
-        }
-
-        #region Standard Overrides
-        public override void ConfigurationUpdated(Config configuration)
-        {
-            // Apply settings from configuration.
-            // ... your code here.
-            _configuration = configuration;
-            _logger.WriteLine($"[{_modConfig.ModId}] Config Updated: Applying");
-        }
-        #endregion
-
-        #region For Exports, Serialization etc.
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public Mod() { }
-#pragma warning restore CS8618
-        #endregion
-    }
-}
-```
-you can now build the project and it should be automatically moved to the Reloaded Mods folder
-
-
-
-## Here is my full Mod.cs without comments
-```cs
-using My_Reloaded_II_Mod1.Configuration;
-using My_Reloaded_II_Mod1.Template;
-using Reloaded.Hooks.ReloadedII.Interfaces;
-using Reloaded.Mod.Interfaces;
-using Reloaded.Memory;
-using System.Diagnostics;
-using Reloaded.Memory.Interfaces;
-
-namespace My_Reloaded_II_Mod1
-{
-    public class Mod : ModBase // <= Do not Remove.
+    public class Mod : ModBase // <= Do not remove.
     {
         private readonly IModLoader _modLoader;
         private readonly IReloadedHooks? _hooks;
@@ -198,20 +145,18 @@ namespace My_Reloaded_II_Mod1
             var baseAddress = Process.GetCurrentProcess().MainModule.BaseAddress;
             Span<byte> bytes = stackalloc byte[1] { 0x16 };
             nuint address = (nuint)baseAddress + 0xF79E3;
-            m.SafeWrite(address, bytes); 
+            m.SafeWrite(address, bytes);
         }
 
         #region Standard Overrides
         public override void ConfigurationUpdated(Config configuration)
         {
-            // Apply settings from configuration.
-            // ... your code here.
             _configuration = configuration;
             _logger.WriteLine($"[{_modConfig.ModId}] Config Updated: Applying");
         }
         #endregion
 
-        #region For Exports, Serialization etc.
+        #region For Exports, Serialization, etc.
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public Mod() { }
 #pragma warning restore CS8618
@@ -219,3 +164,7 @@ namespace My_Reloaded_II_Mod1
     }
 }
 ```
+
+## Conclusion
+
+After completing the code, you can build the project. The compiled files should automatically be moved to the Reloaded Mods folder. Congratulations, you've successfully created a runtime memory patch with Reloaded 2!
