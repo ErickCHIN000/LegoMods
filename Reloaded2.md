@@ -18,7 +18,9 @@ After giving it a project name you will have to configure the Reloaded 2 options
 ![TemplateNuget](nuget.png)
 ## 3. Open Mod.cs
 the code inside mod.cs will look like this...
+
 ![Template2](Template2.png)
+
 here we will write the code to create a patch in the memory when the game starts
 ## 4. Actual coding now
 you can get lazy and do this in the constructor or you can do this in its own method like i am.
